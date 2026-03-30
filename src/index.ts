@@ -17,7 +17,6 @@ import path from "path";
 type ScreenShareOptions = {
   ios?: {
     extensionName?: string;
-    deploymentTarget?: string;
     appGroupIdentifier?: string;
   };
   android?: {
@@ -160,8 +159,7 @@ function withScreenShareEntitlements(
 
 function withScreenShareXcodeProject(
   config: ReturnType<ConfigPlugin>,
-  extensionName: string,
-  deploymentTarget: string
+  extensionName: string
 ): ReturnType<ConfigPlugin> {
   return withXcodeProject(config, (mod) => {
     const xcodeProject = mod.modResults;
@@ -221,7 +219,7 @@ function withScreenShareXcodeProject(
           if (configEntry?.buildSettings) {
             configEntry.buildSettings.SWIFT_VERSION = "5.0";
             configEntry.buildSettings.IPHONEOS_DEPLOYMENT_TARGET =
-              deploymentTarget;
+              DEFAULT_DEPLOYMENT_TARGET;
             configEntry.buildSettings.TARGETED_DEVICE_FAMILY = '"1,2"';
             configEntry.buildSettings.CODE_SIGN_ENTITLEMENTS = `${extensionName}/${extensionName}.entitlements`;
             configEntry.buildSettings.CODE_SIGN_STYLE = "Automatic";
@@ -368,8 +366,6 @@ const withScreenShare: ConfigPlugin<ScreenShareOptions | undefined> = (
 ) => {
   const extensionName =
     options?.ios?.extensionName ?? DEFAULT_EXTENSION_NAME;
-  const deploymentTarget =
-    options?.ios?.deploymentTarget ?? DEFAULT_DEPLOYMENT_TARGET;
   const appGroupId = options?.ios?.appGroupIdentifier;
   const enableAndroidService =
     options?.android?.enableScreenShareService ?? true;
@@ -379,7 +375,7 @@ const withScreenShare: ConfigPlugin<ScreenShareOptions | undefined> = (
   // iOS
   config = withScreenShareInfoPlist(config, extensionName, appGroupId);
   config = withScreenShareEntitlements(config, appGroupId);
-  config = withScreenShareXcodeProject(config, extensionName, deploymentTarget);
+  config = withScreenShareXcodeProject(config, extensionName);
   config = withScreenShareExtensionFiles(config, extensionName, appGroupId);
 
   // Android

@@ -42,7 +42,6 @@ All options are optional with sensible defaults:
     ["expo-livekit-screen-share", {
       "ios": {
         "extensionName": "ScreenShareExtension",
-        "deploymentTarget": "16.0",
         "appGroupIdentifier": "group.com.example.myapp"
       },
       "android": {
@@ -57,7 +56,6 @@ All options are optional with sensible defaults:
 | Option | Platform | Default | Description |
 |--------|----------|---------|-------------|
 | `ios.extensionName` | iOS | `"ScreenShareExtension"` | Name of the Broadcast Upload Extension target |
-| `ios.deploymentTarget` | iOS | `"16.0"` | Minimum iOS deployment target for the extension |
 | `ios.appGroupIdentifier` | iOS | `"group.{bundleIdentifier}"` | Custom App Group identifier (if your project uses a different naming convention) |
 | `android.enableScreenShareService` | Android | `true` | Enable LiveKit's foreground service for screen sharing |
 | `android.foregroundServicePermission` | Android | `true` | Add `FOREGROUND_SERVICE_MEDIA_PROJECTION` permission |

@@ -25,7 +25,8 @@
   ],
   "scripts": {
     "build": "bun run tsc",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "release": "release-it"
   },
   "peerDependencies": {
     "@livekit/react-native": ">=2.0.0",
@@ -37,6 +38,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "release-it": "^19.2.4",
     "typescript": "~5.9.3"
   }
 }

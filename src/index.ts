@@ -18,6 +18,7 @@ type ScreenShareOptions = {
   ios?: {
     extensionName?: string;
     deploymentTarget?: string;
+    appGroupIdentifier?: string;
   };
   android?: {
     enableScreenShareService?: boolean;
@@ -103,10 +104,18 @@ async function downloadSwiftFiles(cacheDir: string): Promise<void> {
   );
 
   for (const file of SWIFT_FILES) {
-    const url = `${JITSI_BASE_URL}/${encodeURIComponent(file)}`;
-    const content = await httpsGet(url);
-    fs.writeFileSync(path.join(cacheDir, file), content);
-    console.log(`  Downloaded ${file}`);
+    const url = `${JITSI_BASE_URL}/${file}`;
+    try {
+      const content = await httpsGet(url);
+      fs.writeFileSync(path.join(cacheDir, file), content);
+      console.log(`  Downloaded ${file}`);
+    } catch (error) {
+      throw new Error(
+        `[expo-livekit-screen-share] Failed to download ${file}. ` +
+          `Ensure you have internet access or manually place the files in ${cacheDir}. ` +
+          `Original error: ${error}`
+      );
+    }
   }
 }
 
@@ -114,26 +123,37 @@ async function downloadSwiftFiles(cacheDir: string): Promise<void> {
 
 function withScreenShareInfoPlist(
   config: ReturnType<ConfigPlugin>,
-  extensionName: string
+  extensionName: string,
+  appGroupId?: string
 ): ReturnType<ConfigPlugin> {
   return withInfoPlist(config, (mod) => {
     const bundleId = mod.ios?.bundleIdentifier ?? "";
+    const appGroup = appGroupId ?? getAppGroupIdentifier(bundleId);
     mod.modResults.RTCScreenSharingExtension = getExtensionBundleIdentifier(
       bundleId,
       extensionName
     );
-    mod.modResults.RTCAppGroupIdentifier = getAppGroupIdentifier(bundleId);
+    mod.modResults.RTCAppGroupIdentifier = appGroup;
     return mod;
   });
 }
 
 function withScreenShareEntitlements(
-  config: ReturnType<ConfigPlugin>
+  config: ReturnType<ConfigPlugin>,
+  appGroupId?: string
 ): ReturnType<ConfigPlugin> {
   return withEntitlementsPlist(config, (mod) => {
     const bundleId = mod.ios?.bundleIdentifier ?? "";
-    const appGroup = getAppGroupIdentifier(bundleId);
-    mod.modResults["com.apple.security.application-groups"] = [appGroup];
+    const appGroup = appGroupId ?? getAppGroupIdentifier(bundleId);
+    const existing =
+      (mod.modResults["com.apple.security.application-groups"] as string[]) ??
+      [];
+    if (!existing.includes(appGroup)) {
+      mod.modResults["com.apple.security.application-groups"] = [
+        ...existing,
+        appGroup,
+      ];
+    }
     return mod;
   });
 }
@@ -221,13 +241,14 @@ function withScreenShareXcodeProject(
 
 function withScreenShareExtensionFiles(
   config: ReturnType<ConfigPlugin>,
-  extensionName: string
+  extensionName: string,
+  appGroupId?: string
 ): ReturnType<ConfigPlugin> {
   return withDangerousMod(config, [
     "ios",
     async (mod) => {
       const bundleId = mod.ios?.bundleIdentifier ?? "";
-      const appGroup = getAppGroupIdentifier(bundleId);
+      const appGroup = appGroupId ?? getAppGroupIdentifier(bundleId);
       const iosPath = path.resolve(mod.modRequest.platformProjectRoot);
       const extensionPath = path.join(iosPath, extensionName);
       const projectRoot = mod.modRequest.projectRoot;
@@ -349,16 +370,17 @@ const withScreenShare: ConfigPlugin<ScreenShareOptions | undefined> = (
     options?.ios?.extensionName ?? DEFAULT_EXTENSION_NAME;
   const deploymentTarget =
     options?.ios?.deploymentTarget ?? DEFAULT_DEPLOYMENT_TARGET;
+  const appGroupId = options?.ios?.appGroupIdentifier;
   const enableAndroidService =
     options?.android?.enableScreenShareService ?? true;
   const enableAndroidPermission =
     options?.android?.foregroundServicePermission ?? true;
 
   // iOS
-  config = withScreenShareInfoPlist(config, extensionName);
-  config = withScreenShareEntitlements(config);
+  config = withScreenShareInfoPlist(config, extensionName, appGroupId);
+  config = withScreenShareEntitlements(config, appGroupId);
   config = withScreenShareXcodeProject(config, extensionName, deploymentTarget);
-  config = withScreenShareExtensionFiles(config, extensionName);
+  config = withScreenShareExtensionFiles(config, extensionName, appGroupId);
 
   // Android
   if (enableAndroidPermission) {

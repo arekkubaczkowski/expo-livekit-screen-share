@@ -1,0 +1,42 @@
+{
+  "name": "expo-livekit-screen-share",
+  "version": "0.1.0",
+  "description": "Expo config plugin for LiveKit screen sharing on iOS (Broadcast Upload Extension) and Android (foreground service)",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arekkubaczkowski/expo-livekit-screen-share"
+  },
+  "keywords": [
+    "expo",
+    "expo-plugin",
+    "livekit",
+    "screen-share",
+    "broadcast-extension",
+    "react-native",
+    "ios",
+    "android"
+  ],
+  "files": [
+    "build",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun run tsc",
+    "prepublishOnly": "bun run build"
+  },
+  "peerDependencies": {
+    "@livekit/react-native": ">=2.0.0",
+    "expo": ">=51.0.0"
+  },
+  "dependencies": {
+    "@expo/config-plugins": ">=8.0.0",
+    "@expo/plist": ">=0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "~5.9.3"
+  }
+}

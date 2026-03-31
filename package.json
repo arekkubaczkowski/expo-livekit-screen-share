@@ -1,6 +1,6 @@
 {
   "name": "expo-livekit-screen-share",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Expo config plugin for LiveKit screen sharing on iOS (Broadcast Upload Extension) and Android (foreground service)",
   "main": "build/index.js",
   "types": "build/index.d.ts",

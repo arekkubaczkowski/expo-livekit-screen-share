@@ -228,6 +228,9 @@ function withScreenShareXcodeProject(
             configEntry.buildSettings.INFOPLIST_FILE = `${extensionName}/Info.plist`;
             configEntry.buildSettings.CURRENT_PROJECT_VERSION = "1";
             configEntry.buildSettings.MARKETING_VERSION = "1.0";
+            // Override compiler — prevents inheriting ccache-clang paths from main project
+            configEntry.buildSettings.CC = "clang";
+            configEntry.buildSettings.CXX = "clang++";
           }
         }
       }

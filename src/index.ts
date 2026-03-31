@@ -228,9 +228,6 @@ function withScreenShareXcodeProject(
             configEntry.buildSettings.INFOPLIST_FILE = `${extensionName}/Info.plist`;
             configEntry.buildSettings.CURRENT_PROJECT_VERSION = "1";
             configEntry.buildSettings.MARKETING_VERSION = "1.0";
-            // Override compiler — prevents inheriting ccache-clang paths from main project
-            configEntry.buildSettings.CC = "clang";
-            configEntry.buildSettings.CXX = '"clang++"';
           }
         }
       }
@@ -301,6 +298,53 @@ function withScreenShareExtensionFiles(
         path.join(extensionPath, `${extensionName}.entitlements`),
         plist.build(entitlements)
       );
+
+      return mod;
+    },
+  ]);
+}
+
+// --- iOS: Patch Podfile to reset ccache on extension target ---
+
+function withScreenSharePodfilePostInstall(
+  config: ReturnType<ConfigPlugin>,
+  extensionName: string
+): ReturnType<ConfigPlugin> {
+  return withDangerousMod(config, [
+    "ios",
+    (mod) => {
+      const iosPath = path.resolve(mod.modRequest.platformProjectRoot);
+      const podfilePath = path.join(iosPath, "Podfile");
+
+      let podfileContent = fs.readFileSync(podfilePath, "utf8");
+
+      const snippet = `
+    # [expo-livekit-screen-share] Reset ccache compiler on extension target
+    installer.aggregate_targets
+      .map(&:user_project)
+      .uniq(&:path)
+      .each do |project|
+        extension_target = project.native_targets.find { |t| t.name == '${extensionName}' }
+        next unless extension_target
+        extension_target.build_configurations.each do |config|
+          config.build_settings.delete('CC')
+          config.build_settings.delete('LD')
+          config.build_settings.delete('CXX')
+          config.build_settings.delete('LDPLUSPLUS')
+        end
+        project.save()
+      end`;
+
+      // Insert before the closing `end` of the post_install block
+      // Look for the react_native_post_install call and add after it
+      if (podfileContent.includes("react_native_post_install")) {
+        podfileContent = podfileContent.replace(
+          /(react_native_post_install\([^)]*\))/,
+          `$1\n${snippet}`
+        );
+      }
+
+      fs.writeFileSync(podfilePath, podfileContent);
 
       return mod;
     },
@@ -380,6 +424,7 @@ const withScreenShare: ConfigPlugin<ScreenShareOptions | undefined> = (
   config = withScreenShareEntitlements(config, appGroupId);
   config = withScreenShareXcodeProject(config, extensionName);
   config = withScreenShareExtensionFiles(config, extensionName, appGroupId);
+  config = withScreenSharePodfilePostInstall(config, extensionName);
 
   // Android
   if (enableAndroidPermission) {

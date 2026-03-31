@@ -230,7 +230,7 @@ function withScreenShareXcodeProject(
             configEntry.buildSettings.MARKETING_VERSION = "1.0";
             // Override compiler — prevents inheriting ccache-clang paths from main project
             configEntry.buildSettings.CC = "clang";
-            configEntry.buildSettings.CXX = "clang++";
+            configEntry.buildSettings.CXX = '"clang++"';
           }
         }
       }

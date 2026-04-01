@@ -1,3 +1,6 @@
 node_modules/
 build/
 bun.lock
+ios/
+android/
+app.json

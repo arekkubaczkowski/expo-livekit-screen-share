@@ -319,7 +319,7 @@ function withScreenSharePodfilePostInstall(
       let podfileContent = fs.readFileSync(podfilePath, "utf8");
 
       const snippet = `
-    # [expo-livekit-screen-share] Reset ccache compiler on extension target
+    # [expo-livekit-screen-share] Override ccache compiler on extension target
     installer.aggregate_targets
       .map(&:user_project)
       .uniq(&:path)
@@ -327,21 +327,52 @@ function withScreenSharePodfilePostInstall(
         extension_target = project.native_targets.find { |t| t.name == '${extensionName}' }
         next unless extension_target
         extension_target.build_configurations.each do |config|
-          config.build_settings.delete('CC')
-          config.build_settings.delete('LD')
-          config.build_settings.delete('CXX')
-          config.build_settings.delete('LDPLUSPLUS')
+          config.build_settings['CC'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang'
+          config.build_settings['CXX'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++'
+          config.build_settings['LD'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang'
+          config.build_settings['LDPLUSPLUS'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++'
         end
         project.save()
       end`;
 
-      // Insert before the closing `end` of the post_install block
-      // Look for the react_native_post_install call and add after it
-      if (podfileContent.includes("react_native_post_install")) {
-        podfileContent = podfileContent.replace(
-          /(react_native_post_install\([^)]*\))/,
-          `$1\n${snippet}`
-        );
+      if (
+        podfileContent.includes("post_install") &&
+        !podfileContent.includes("expo-livekit-screen-share")
+      ) {
+        // Insert snippet inside the existing post_install block, before its closing `end`.
+        // The Podfile structure is:
+        //   post_install do |installer|
+        //     react_native_post_install(...)
+        //   end
+        // We insert before that final `end`.
+        const lines = podfileContent.split("\n");
+        let postInstallDepth = 0;
+        let insertIndex = -1;
+
+        for (let i = 0; i < lines.length; i++) {
+          const trimmed = lines[i].trim();
+          if (trimmed.match(/^post_install\s+do/)) {
+            postInstallDepth = 1;
+            continue;
+          }
+          if (postInstallDepth > 0) {
+            if (trimmed.match(/\bdo\b(\s+\|.*\|)?$/)) {
+              postInstallDepth++;
+            }
+            if (trimmed === "end") {
+              postInstallDepth--;
+              if (postInstallDepth === 0) {
+                insertIndex = i;
+                break;
+              }
+            }
+          }
+        }
+
+        if (insertIndex !== -1) {
+          lines.splice(insertIndex, 0, snippet);
+          podfileContent = lines.join("\n");
+        }
       }
 
       fs.writeFileSync(podfilePath, podfileContent);

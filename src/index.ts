@@ -14,7 +14,7 @@ import path from "path";
 
 // --- Types ---
 
-type ScreenShareOptions = {
+export type ScreenShareOptions = {
   ios?: {
     extensionName?: string;
     appGroupIdentifier?: string;
@@ -62,9 +62,11 @@ function getExtensionBundleIdentifier(
   return `${bundleIdentifier}.${extensionName}`;
 }
 
+const DOWNLOAD_TIMEOUT_MS = 30_000;
+
 function httpsGet(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    https
+    const req = https
       .get(url, (res) => {
         if (
           res.statusCode &&
@@ -84,6 +86,11 @@ function httpsGet(url: string): Promise<string> {
         res.on("end", () => resolve(data));
       })
       .on("error", reject);
+
+    req.setTimeout(DOWNLOAD_TIMEOUT_MS, () => {
+      req.destroy();
+      reject(new Error(`Download timed out after ${DOWNLOAD_TIMEOUT_MS}ms: ${url}`));
+    });
   });
 }
 
@@ -326,11 +333,11 @@ function withScreenSharePodfilePostInstall(
       .each do |project|
         extension_target = project.native_targets.find { |t| t.name == '${extensionName}' }
         next unless extension_target
-        extension_target.build_configurations.each do |config|
-          config.build_settings['CC'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang'
-          config.build_settings['CXX'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++'
-          config.build_settings['LD'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang'
-          config.build_settings['LDPLUSPLUS'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++'
+        extension_target.build_configurations.each do |ext_config|
+          ext_config.build_settings['CC'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang'
+          ext_config.build_settings['CXX'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++'
+          ext_config.build_settings['LD'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang'
+          ext_config.build_settings['LDPLUSPLUS'] = '$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++'
         end
         project.save()
       end`;
@@ -356,7 +363,7 @@ function withScreenSharePodfilePostInstall(
             continue;
           }
           if (postInstallDepth > 0) {
-            if (trimmed.match(/\bdo\b(\s+\|.*\|)?$/)) {
+            if (trimmed.match(/\bdo\b(\s+\|.*\|)?\s*$/)) {
               postInstallDepth++;
             }
             if (trimmed === "end") {

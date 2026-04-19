@@ -279,6 +279,7 @@ function withScreenShareExtensionFiles(
           NSExtensionPointIdentifier:
             "com.apple.broadcast-services-upload",
           NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).SampleHandler",
+          RPBroadcastProcessMode: "RPBroadcastProcessModeSampleBuffer",
         },
       };
       fs.writeFileSync(
